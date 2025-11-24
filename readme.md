@@ -15,6 +15,7 @@
 
 * **Effortlessly Upload Large Google Photos Takeouts:**  Immich-Go excels at handling the massive archives you download from Google Photos using Google Takeout. It efficiently processes these archives while preserving valuable metadata like GPS location, capture date, and album information.
 * **Flexible Uploads:**  Immich-Go isn't limited to Google Photos. You can upload photos directly from your computer folders, folders tree and ZIP archives.
+* **Backup to Local or S3:** Backup your Immich assets to a local directory or AWS S3. Incremental backups track changes via manifest to minimize transfers.
 * **Simple Installation:** Immich-Go doesn't require NodeJS or Docker for installation. This makes it easy to get started, even for those less familiar with technical environments.
 * **Prioritize Quality:**  Immich-Go discards any lower-resolution versions that might be included in Google Photos Takeout, ensuring you have the best possible copies on your Immich server.
 * **Stack burst and raw/jpg photos**: Group together related photos in Immich.
@@ -270,6 +271,76 @@ Let use it to group burst  and jpg/raw images together.
 | `-yes`             | Assume Yes to all questions                                 | `FALSE`                 |
 | `-date=date_range` | Check only assets have a date of capture in the given range | `1850-01-04,2030-01-01` |
 
+
+## Command `backup`
+
+Use this command to backup your Immich assets to local storage or AWS S3. The backup is incremental - only new or modified assets are downloaded, tracked via a manifest file.
+
+### Switches and options:
+
+| **Parameter**              | **Description**                                                    | **Default value** |
+|----------------------------|--------------------------------------------------------------------|-------------------|
+| `-output=/path/to/backup`  | Local directory for backup (required for local backup)             |                   |
+| `-s3-assets-bucket=NAME`   | S3 bucket for storing assets (required for S3 backup)              |                   |
+| `-s3-manifest-bucket=NAME` | S3 bucket for storing the manifest (required for S3 backup)        |                   |
+| `-s3-region=REGION`        | AWS region for S3 buckets (required for S3 backup)                 |                   |
+| `-s3-assets-prefix=PREFIX` | Prefix for assets in S3 bucket (optional)                          |                   |
+| `-date=YYYY-MM-DD:YYYY-MM-DD` | Date range to filter assets for backup                          |                   |
+| `-dry-run`                 | Preview all actions without downloading or uploading               | `FALSE`           |
+
+### Local Backup
+
+Backup to a local directory:
+
+```sh
+./immich-go -server=http://mynas:2283 -key=YOUR_API_KEY backup -output=/path/to/backup
+```
+
+Assets are organized by date: `YYYY/MM/filename`. A manifest file (`.immich-backup-manifest.json`) tracks backed up assets.
+
+### S3 Backup
+
+Backup to AWS S3 with separate buckets for assets and manifest:
+
+```sh
+./immich-go -server=http://mynas:2283 -key=YOUR_API_KEY backup \
+  -s3-assets-bucket=my-immich-assets \
+  -s3-manifest-bucket=my-immich-manifest \
+  -s3-region=us-east-1 \
+  -s3-assets-prefix=backup
+```
+
+**AWS Credentials**: Configure via environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) or `~/.aws/credentials` file.
+
+**Storage Class**: Assets are stored using S3 Glacier Deep Archive for lowest cost archival storage. This is ideal for backup data that is rarely accessed.
+
+### Incremental Backup
+
+The backup command uses a manifest to track which assets have been backed up. On subsequent runs:
+- Assets already in the manifest with matching checksums are skipped
+- Only new or modified assets are downloaded and uploaded
+- The manifest is updated after each successful backup
+
+This minimizes S3 operations and bandwidth usage.
+
+### Example: Backup photos from a specific date range
+
+```sh
+./immich-go -server=http://mynas:2283 -key=YOUR_API_KEY backup \
+  -s3-assets-bucket=my-photos-backup \
+  -s3-manifest-bucket=my-backup-manifest \
+  -s3-region=eu-west-1 \
+  -date=2024-01-01:2024-12-31
+```
+
+### Example: Preview backup without transferring files
+
+```sh
+./immich-go -server=http://mynas:2283 -key=YOUR_API_KEY backup \
+  -output=/path/to/backup \
+  -date=2024-06 \
+  -dry-run
+```
 
 ## Command `tool`
 

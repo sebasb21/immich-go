@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 
 	"github.com/simulot/immich-go/cmd"
+	"github.com/simulot/immich-go/cmd/backup"
 	"github.com/simulot/immich-go/cmd/duplicate"
 	"github.com/simulot/immich-go/cmd/metadata"
 	"github.com/simulot/immich-go/cmd/stack"
@@ -110,7 +111,7 @@ func Run(ctx context.Context) error {
 	fmt.Println(app.Banner.String())
 
 	if len(fs.Args()) == 0 {
-		err = errors.New("missing command upload|duplicate|stack|tool")
+		err = errors.New("missing command upload|duplicate|stack|tool|backup")
 	}
 
 	if err != nil {
@@ -130,6 +131,8 @@ func Run(ctx context.Context) error {
 		err = stack.NewStackCommand(ctx, &app, fs.Args()[1:])
 	case "tool":
 		err = tool.CommandTool(ctx, &app, fs.Args()[1:])
+	case "backup":
+		err = backup.BackupCommand(ctx, &app, fs.Args()[1:])
 	default:
 		err = fmt.Errorf("unknown command: %q", cmd)
 	}

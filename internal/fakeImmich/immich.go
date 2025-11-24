@@ -95,3 +95,7 @@ func (c *MockedCLient) GetJobs(ctx context.Context) (map[string]immich.Job, erro
 func (c *MockedCLient) GetAlbumInfo(context.Context, string, bool) (immich.AlbumContent, error) {
 	return immich.AlbumContent{}, nil
 }
+
+func (c *MockedCLient) DownloadAsset(ctx context.Context, id string) (io.ReadCloser, error) {
+	return nil, nil
+}

@@ -29,6 +29,7 @@ const (
 	EndPointGetAssetStatistics     = "GetAssetStatistics"
 	EndPointGetSupportedMediaTypes = "GetSupportedMediaTypes"
 	EndPointGetAllAssets           = "GetAllAssets"
+	EndPointDownloadAsset          = "DownloadAsset"
 )
 
 type TooManyInternalError struct {

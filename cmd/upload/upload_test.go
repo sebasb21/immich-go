@@ -105,6 +105,10 @@ func (c *stubIC) GetAlbumInfo(context.Context, string, bool) (immich.AlbumConten
 	return immich.AlbumContent{}, nil
 }
 
+func (c *stubIC) DownloadAsset(ctx context.Context, id string) (io.ReadCloser, error) {
+	return nil, nil
+}
+
 type icCatchUploadsAssets struct {
 	stubIC
 

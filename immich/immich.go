@@ -30,6 +30,7 @@ type ImmichInterface interface {
 	GetAllAssetsWithFilter(context.Context, func(*Asset) error) error
 	AssetUpload(context.Context, *browser.LocalAssetFile) (AssetResponse, error)
 	DeleteAssets(context.Context, []string, bool) error
+	DownloadAsset(ctx context.Context, id string) (io.ReadCloser, error)
 
 	GetAllAlbums(ctx context.Context) ([]AlbumSimplified, error)
 	GetAlbumInfo(ctx context.Context, id string, withoutAssets bool) (AlbumContent, error)

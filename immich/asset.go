@@ -320,3 +320,25 @@ func (ic *ImmichClient) StackAssets(ctx context.Context, coverID string, ids []s
 
 	return ic.UpdateAssets(ctx, ids, cover.IsArchived, cover.IsFavorite, cover.ExifInfo.Latitude, cover.ExifInfo.Longitude, false, coverID)
 }
+
+// DownloadAsset downloads the original asset file from the server.
+// The caller is responsible for closing the returned ReadCloser.
+func (ic *ImmichClient) DownloadAsset(ctx context.Context, id string) (io.ReadCloser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ic.endPoint+"/assets/"+id+"/original", http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("x-api-key", ic.key)
+
+	resp, err := ic.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode >= 300 {
+		defer resp.Body.Close()
+		return nil, fmt.Errorf("download asset %s: %s", id, resp.Status)
+	}
+
+	return resp.Body, nil
+}
