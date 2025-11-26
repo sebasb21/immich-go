@@ -68,7 +68,7 @@ func TestS3Backend_Integration(t *testing.T) {
 
 	// Test S3 backend creation
 	t.Run("CreateS3Backend", func(t *testing.T) {
-		backend, err := NewS3Backend(ctx, assetsBucket, manifestBucket, region, "test-prefix")
+		backend, err := NewS3Backend(ctx, assetsBucket, manifestBucket, region, "test-prefix", 0)
 		if err != nil {
 			t.Fatalf("Failed to create S3 backend: %v", err)
 		}
@@ -80,7 +80,7 @@ func TestS3Backend_Integration(t *testing.T) {
 
 	// Test manifest operations
 	t.Run("ManifestOperations", func(t *testing.T) {
-		backend, err := NewS3Backend(ctx, assetsBucket, manifestBucket, region, "")
+		backend, err := NewS3Backend(ctx, assetsBucket, manifestBucket, region, "", 0)
 		if err != nil {
 			t.Fatalf("Failed to create S3 backend: %v", err)
 		}
@@ -168,7 +168,7 @@ func TestS3Backup_Integration(t *testing.T) {
 
 	// Create S3 backend
 	testPrefix := "integration-test-" + time.Now().Format("20060102-150405")
-	backend, err := NewS3Backend(ctx, assetsBucket, manifestBucket, region, testPrefix)
+	backend, err := NewS3Backend(ctx, assetsBucket, manifestBucket, region, testPrefix, 0)
 	if err != nil {
 		t.Fatalf("Failed to create S3 backend: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestS3IncrementalBackup_Integration(t *testing.T) {
 
 	// Create S3 backend with unique prefix
 	testPrefix := "incremental-test-" + time.Now().Format("20060102-150405")
-	backend, err := NewS3Backend(ctx, assetsBucket, manifestBucket, region, testPrefix)
+	backend, err := NewS3Backend(ctx, assetsBucket, manifestBucket, region, testPrefix, 0)
 	if err != nil {
 		t.Fatalf("Failed to create S3 backend: %v", err)
 	}

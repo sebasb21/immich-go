@@ -31,6 +31,9 @@ type BackupCmd struct {
 	S3Region         string
 	S3AssetsPrefix   string
 
+	// Upload configuration
+	MaxUploadBandwidth int64 // bytes per second, 0 = unlimited
+
 	// Filtering options
 	DateRange immich.DateRange
 
@@ -77,6 +80,9 @@ func newCommand(ctx context.Context, common *cmd.SharedFlags, args []string) (*B
 	cmd.StringVar(&app.S3ManifestBucket, "s3-manifest-bucket", "", "S3 bucket for storing manifest")
 	cmd.StringVar(&app.S3Region, "s3-region", "", "AWS region for S3 buckets")
 	cmd.StringVar(&app.S3AssetsPrefix, "s3-assets-prefix", "", "Prefix for assets in S3 bucket")
+
+	// Upload configuration
+	cmd.Int64Var(&app.MaxUploadBandwidth, "max-upload-bandwidth", 0, "Maximum upload bandwidth in bytes per second (0 = unlimited). Example: 1048576 for 1 MB/s")
 
 	// Filtering
 	cmd.Var(&app.DateRange, "date", "Date range for backup (format: YYYY-MM-DD:YYYY-MM-DD)")
@@ -137,6 +143,9 @@ func (app *BackupCmd) run(ctx context.Context) error {
 		app.Log.Info("Starting backup to S3...")
 		app.Log.Info(fmt.Sprintf("  Assets bucket: %s", app.S3AssetsBucket))
 		app.Log.Info(fmt.Sprintf("  Manifest bucket: %s", app.S3ManifestBucket))
+		if app.MaxUploadBandwidth > 0 {
+			app.Log.Info(fmt.Sprintf("  Upload bandwidth limit: %s/s", formatBytes(app.MaxUploadBandwidth)))
+		}
 	} else {
 		app.Log.Info("Starting backup to local storage...")
 		app.Log.Info(fmt.Sprintf("  Output: %s", app.Output))
@@ -215,7 +224,7 @@ func (app *BackupCmd) run(ctx context.Context) error {
 
 func (app *BackupCmd) initS3(ctx context.Context) error {
 	var err error
-	app.s3Backend, err = NewS3Backend(ctx, app.S3AssetsBucket, app.S3ManifestBucket, app.S3Region, app.S3AssetsPrefix)
+	app.s3Backend, err = NewS3Backend(ctx, app.S3AssetsBucket, app.S3ManifestBucket, app.S3Region, app.S3AssetsPrefix, app.MaxUploadBandwidth)
 	if err != nil {
 		return fmt.Errorf("failed to initialize S3: %w", err)
 	}
