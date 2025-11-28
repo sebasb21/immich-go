@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -178,8 +179,13 @@ func (s *S3Backend) DownloadManifest(ctx context.Context, manifestKey string) (m
 		Key:    aws.String(manifestKey),
 	})
 	if err != nil {
-		// Check if it's a "not found" error - that's OK for first run
-		return make(map[string]ManifestEntry), nil
+		// Return error for any issue (including not found)
+		var nsk *types.NoSuchKey
+		if errors.As(err, &nsk) {
+			return nil, fmt.Errorf("manifest not found in S3 bucket '%s' (key: %s). Cannot continue without existing manifest", s.manifestBucket, manifestKey)
+		}
+		// For any other error (permissions, network, etc.), return it
+		return nil, fmt.Errorf("failed to get manifest from S3 bucket '%s': %w", s.manifestBucket, err)
 	}
 	defer result.Body.Close()
 

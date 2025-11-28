@@ -233,8 +233,7 @@ func (app *BackupCmd) initS3(ctx context.Context) error {
 	manifestKey := "immich-backup-manifest.json"
 	entries, err := app.s3Backend.DownloadManifest(ctx, manifestKey)
 	if err != nil {
-		app.Log.Info("No existing manifest found in S3, starting fresh")
-		entries = make(map[string]ManifestEntry)
+		return fmt.Errorf("failed to load manifest: %w", err)
 	}
 
 	// Create manifest with S3 entries
