@@ -10,11 +10,12 @@ import (
 
 // ManifestEntry tracks a single backed up asset
 type ManifestEntry struct {
-	AssetID    string    `json:"asset_id"`
-	Checksum   string    `json:"checksum"`
-	BackupPath string    `json:"backup_path"`
-	BackedUpAt time.Time `json:"backed_up_at"`
-	FileSize   int       `json:"file_size"`
+	AssetID      string    `json:"asset_id"`
+	Checksum     string    `json:"checksum"`
+	BackupPath   string    `json:"backup_path"`
+	BackedUpAt   time.Time `json:"backed_up_at"`
+	FileSize     int       `json:"file_size"`
+	StorageClass string    `json:"storage_class,omitempty"`
 }
 
 // Manifest tracks all backed up assets
