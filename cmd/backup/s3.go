@@ -7,6 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -197,11 +201,17 @@ func (s *S3Backend) DownloadManifest(ctx context.Context, manifestKey string) (m
 	return entries, nil
 }
 
-// UploadManifest uploads the manifest to S3
+// UploadManifest uploads the manifest to S3 and saves local backup
 func (s *S3Backend) UploadManifest(ctx context.Context, manifestKey string, entries map[string]ManifestEntry) error {
 	data, err := json.MarshalIndent(entries, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	// Save local backup before uploading to S3
+	if err := s.saveLocalManifestBackup(manifestKey, data); err != nil {
+		// Log warning but don't fail - local backup is not critical
+		fmt.Printf("Warning: failed to save local manifest backup: %v\n", err)
 	}
 
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
@@ -212,6 +222,90 @@ func (s *S3Backend) UploadManifest(ctx context.Context, manifestKey string, entr
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload manifest to S3: %w", err)
+	}
+
+	return nil
+}
+
+// saveLocalManifestBackup saves the manifest locally and keeps only the last 2 versions
+func (s *S3Backend) saveLocalManifestBackup(manifestKey string, data []byte) error {
+	// Get local backup directory
+	backupDir, err := getManifestBackupDir()
+	if err != nil {
+		return err
+	}
+
+	// Create backup directory if it doesn't exist
+	if err := os.MkdirAll(backupDir, 0o700); err != nil {
+		return fmt.Errorf("failed to create backup directory: %w", err)
+	}
+
+	// Generate timestamped filename
+	timestamp := time.Now().Format("20060102-150405")
+	backupFilename := fmt.Sprintf("%s.%s.backup", manifestKey, timestamp)
+	backupPath := filepath.Join(backupDir, backupFilename)
+
+	// Write the backup file
+	if err := os.WriteFile(backupPath, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write backup file: %w", err)
+	}
+
+	// Clean up old backups, keeping only the last 2
+	if err := cleanupOldManifestBackups(backupDir, manifestKey, 2); err != nil {
+		// Log warning but don't fail
+		fmt.Printf("Warning: failed to cleanup old backups: %v\n", err)
+	}
+
+	fmt.Printf("Saved local manifest backup: %s\n", backupPath)
+	return nil
+}
+
+// getManifestBackupDir returns the directory for manifest backups
+func getManifestBackupDir() (string, error) {
+	// Get current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		// Fallback to relative path if we can't get cwd
+		return "./.immich-go-manifest-backups", nil
+	}
+	return filepath.Join(cwd, ".immich-go-manifest-backups"), nil
+}
+
+// cleanupOldManifestBackups keeps only the last N backup files for a given manifest
+func cleanupOldManifestBackups(backupDir, manifestKey string, keepCount int) error {
+	// Read all files in backup directory
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		return err
+	}
+
+	// Filter files that match this manifest key
+	var backupFiles []os.DirEntry
+	prefix := manifestKey + "."
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) && strings.HasSuffix(entry.Name(), ".backup") {
+			backupFiles = append(backupFiles, entry)
+		}
+	}
+
+	// If we have fewer backups than keepCount, nothing to delete
+	if len(backupFiles) <= keepCount {
+		return nil
+	}
+
+	// Sort by name (which includes timestamp, so newest first when sorted descending)
+	sort.Slice(backupFiles, func(i, j int) bool {
+		return backupFiles[i].Name() > backupFiles[j].Name()
+	})
+
+	// Delete old backups (keeping only the newest keepCount)
+	for i := keepCount; i < len(backupFiles); i++ {
+		oldFile := filepath.Join(backupDir, backupFiles[i].Name())
+		if err := os.Remove(oldFile); err != nil {
+			fmt.Printf("Warning: failed to delete old backup %s: %v\n", oldFile, err)
+		} else {
+			fmt.Printf("Deleted old manifest backup: %s\n", backupFiles[i].Name())
+		}
 	}
 
 	return nil
